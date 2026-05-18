@@ -25,3 +25,5 @@ APScheduler==3.10.4  # Task scheduling
 redis==5.0.1  # Fast caching
 vispy==0.14.1  # High performance OpenGL visualizations
 pyaudio==0.2.14  # Audio streaming for PyAudio
+
+ultralytics==8.1.10  # YOLO object detection

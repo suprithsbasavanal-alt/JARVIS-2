@@ -2,6 +2,9 @@ import os # OS commands
 import subprocess # Running shell commands
 import psutil # System information
 import logging # Logging errors
+import pyautogui # For window/mouse management
+import shutil # For file operations
+from pathlib import Path # For better path handling
 
 class MacController:
     """
@@ -45,6 +48,11 @@ class MacController:
                 stats = self.get_system_stats() # Get actual data
                 logging.info(f"System Stats: {stats}") # Log stats
                 # In main.py, JARVIS should speak this, but for now we log it.
+            elif "search spotlight for" in text:
+                query = text.split("search spotlight for")[-1].strip() # Get query
+                self.spotlight_search(query) # Run search
+            elif "tile windows" in text or "split screen" in text:
+                self.tile_windows() # Tile windows
         except Exception as e:
             logging.error(f"Failed to execute system command: {e}") # Log error
 
@@ -77,3 +85,35 @@ class MacController:
         except Exception as e:
             logging.error(f"psutil failed to get stats: {e}") # Log error
             return "I cannot access system statistics right now." # Error message
+
+    def spotlight_search(self, query):
+        """Uses PyAutoGUI to open Spotlight and search for a query."""
+        print(f"Searching Spotlight for '{query}'...") # Log
+        pyautogui.hotkey('command', 'space') # Open Spotlight
+        pyautogui.sleep(0.5) # Wait for it to open
+        pyautogui.typewrite(query) # Type query
+        pyautogui.sleep(0.5) # Wait for results
+        pyautogui.press('enter') # Press enter to open top result
+        
+    def tile_windows(self):
+        """Uses AppleScript to tile the front two windows (requires Magnet or Rectangle, or native macOS 15+).
+           For a generic approach, we can just use AppleScript to resize."""
+        print("Tiling windows...") # Log
+        script = '''
+        tell application "System Events"
+            set frontApp to first application process whose frontmost is true
+            tell frontApp
+                set theWindow to window 1
+                set position of theWindow to {0, 25}
+                set size of theWindow to {1440, 900}
+            end tell
+        end tell
+        ''' # Basic script to resize window
+        subprocess.run(["osascript", "-e", script]) # Execute
+
+    def list_folder(self, folder_path="~/Desktop"):
+        """Lists files in a folder using pathlib."""
+        path = Path(folder_path).expanduser() # Expand ~
+        if not path.exists():
+            return "Folder does not exist." # Handle error
+        return [f.name for f in path.iterdir() if f.is_file()] # Return file list
