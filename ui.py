@@ -1,85 +1,144 @@
-import sys # System arguments
-from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout # UI elements
-from PyQt6.QtCore import Qt, QTimer # Core features
-from PyQt6.QtGui import QColor, QFont # Graphics
-import datetime # Time tracking
+import sys          # System arguments
+import logging       # Error logging
+import datetime      # Time tracking
 
-class JarvisUI(QWidget):
+try:
+    from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout # UI elements
+    from PyQt6.QtCore import Qt, QTimer   # Core features
+    from PyQt6.QtGui import QColor, QFont  # Graphics
+    HAS_QT = True
+except ImportError:
+    HAS_QT = False
+
+try:
+    import pyautogui  # Screen capture
+    import cv2        # OpenCV for image processing
+    import numpy as np  # Array operations
+    import pytesseract  # OCR for text extraction
+    HAS_VISION = True
+except ImportError:
+    HAS_VISION = False
+
+
+class JarvisUI:
     """
-    JARVIS 3.0 Desktop Widget.
-    A floating, transparent, draggable PyQt6 HUD.
+    JARVIS 3.0 Desktop HUD.
+    A floating, transparent, draggable PyQt6 widget.
+
+    NOTE: __init__ intentionally does NOT create any QWidget objects —
+    that is deferred to start() so that a QApplication can be created
+    first in main.py without triggering the
+    'Must construct a QApplication before a QWidget' abort.
     """
+
     def __init__(self, core):
-        """Initializes the UI window."""
-        super().__init__() # Call parent constructor
-        self.core = core # Store JARVIS core instance
-        self._setup_ui() # Configure UI
-        
-    def _setup_ui(self):
-        """Configures the window appearance to be transparent and borderless."""
-        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint) # Float on top, no borders
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground) # Transparent background
-        self.resize(300, 200) # Set size
-        
-        # Main layout
-        layout = QVBoxLayout() # Vertical box layout
-        layout.setAlignment(Qt.AlignmentFlag.AlignCenter) # Center content
-        
-        # Title Label (JARVIS Logo substitute)
-        self.title_label = QLabel("JARVIS 3.0") # Text label
-        self.title_label.setStyleSheet("color: #00f3ff; font-size: 24px; font-weight: bold;") # Cyberpunk cyan
-        self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter) # Center text
-        
-        # Time Label
-        self.time_label = QLabel() # Empty label for time
-        self.time_label.setStyleSheet("color: #ffffff; font-size: 16px;") # White text
-        self.time_label.setAlignment(Qt.AlignmentFlag.AlignCenter) # Center text
-        
-        # Status Label
-        self.status_label = QLabel("Online and Listening...") # Status text
-        self.status_label.setStyleSheet("color: #00ff00; font-size: 12px;") # Green text
-        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter) # Center text
-        
-        # Add widgets to layout
-        layout.addWidget(self.title_label) # Add title
-        layout.addWidget(self.time_label) # Add time
-        layout.addWidget(self.status_label) # Add status
-        
-        self.setLayout(layout) # Set layout to window
-        
-        # Start a timer to update the clock
-        self.timer = QTimer(self) # Create timer
-        self.timer.timeout.connect(self.update_time) # Connect to function
-        self.timer.start(1000) # Update every second (1000ms)
-        self.update_time() # Initial call
-        
-    def update_time(self):
-        """Updates the time label with current time."""
-        current_time = datetime.datetime.now().strftime("%H:%M:%S") # Get formatted time
-        self.time_label.setText(current_time) # Set text
+        """Store core reference only — no Qt objects created here."""
+        self.core   = core   # JARVIS core instance
+        self._widget = None  # Created lazily in start()
+
+    # ── Internal widget builder (called only after QApplication exists) ────
+
+    def _build_widget(self):
+        """Creates the actual Qt window and wires up the clock timer."""
+        if not HAS_QT:
+            return
+
+        # Inline QWidget subclass so the class itself never inherits QWidget
+        # at module import time.
+        class _HUD(QWidget):
+            def mousePressEvent(inner_self, event):
+                inner_self._drag_pos = event.globalPosition().toPoint()
+
+            def mouseMoveEvent(inner_self, event):
+                delta = event.globalPosition().toPoint() - inner_self._drag_pos
+                inner_self.move(inner_self.x() + delta.x(), inner_self.y() + delta.y())
+                inner_self._drag_pos = event.globalPosition().toPoint()
+
+        w = _HUD()
+        w.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint |
+            Qt.WindowType.WindowStaysOnTopHint
+        )                                               # Float on top, no borders
+        w.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground) # Transparent background
+        w.resize(300, 200)
+
+        # ── Layout ──────────────────────────────────────────────────────
+        layout = QVBoxLayout()
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        title_label = QLabel("JARVIS 3.0")
+        title_label.setStyleSheet("color: #00f3ff; font-size: 24px; font-weight: bold;")
+        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        time_label = QLabel()
+        time_label.setStyleSheet("color: #ffffff; font-size: 16px;")
+        time_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        status_label = QLabel("Online and Listening...")
+        status_label.setStyleSheet("color: #00ff00; font-size: 12px;")
+        status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        layout.addWidget(title_label)
+        layout.addWidget(time_label)
+        layout.addWidget(status_label)
+        w.setLayout(layout)
+
+        # Store references for later mutation
+        w._title_label  = title_label
+        w._time_label   = time_label
+        w._status_label = status_label
+        w._drag_pos     = None
+
+        # Clock timer
+        timer = QTimer(w)
+        timer.timeout.connect(lambda: time_label.setText(
+            datetime.datetime.now().strftime("%H:%M:%S")
+        ))
+        timer.start(1000)
+        time_label.setText(datetime.datetime.now().strftime("%H:%M:%S"))
+
+        self._widget = w
+
+    # ── Public API ────────────────────────────────────────────────────────
 
     def pulse_ui(self):
-        """Called when JARVIS is listening or speaking."""
-        # Simple animation: change color to red when active
-        self.title_label.setStyleSheet("color: #ff0055; font-size: 24px; font-weight: bold;") # Pulse red
-        QTimer.singleShot(2000, self.reset_pulse) # Reset after 2 seconds
-        
+        """Called when JARVIS is listening / speaking — pulses the title red."""
+        if not (HAS_QT and self._widget):
+            return
+        self._widget._title_label.setStyleSheet(
+            "color: #ff0055; font-size: 24px; font-weight: bold;"
+        )
+        QTimer.singleShot(2000, self.reset_pulse)
+
     def reset_pulse(self):
-        """Resets the UI color back to idle."""
-        self.title_label.setStyleSheet("color: #00f3ff; font-size: 24px; font-weight: bold;") # Back to cyan
+        """Resets the title colour back to idle cyan."""
+        if not (HAS_QT and self._widget):
+            return
+        self._widget._title_label.setStyleSheet(
+            "color: #00f3ff; font-size: 24px; font-weight: bold;"
+        )
 
-    def mousePressEvent(self, event):
-        """Allows dragging the frameless window."""
-        self.oldPos = event.globalPosition().toPoint() # Save click position
-
-    def mouseMoveEvent(self, event):
-        """Moves the window when dragged."""
-        delta = event.globalPosition().toPoint() - self.oldPos # Calculate movement
-        self.move(self.x() + delta.x(), self.y() + delta.y()) # Move window
-        self.oldPos = event.globalPosition().toPoint() # Update position
+    def capture_screen(self, save_path="current_screen.png"):
+        """Takes a screenshot of the primary display."""
+        if not HAS_VISION:
+            return None
+        try:
+            screenshot = pyautogui.screenshot()
+            screenshot.save(save_path)
+            return save_path
+        except Exception as e:
+            logging.error(f"Failed to capture screen: {e}")
+            return None
 
     def start(self):
-        """Launches the PyQt Application loop."""
-        app = QApplication(sys.argv) # Create Qt App
-        self.show() # Show window
-        app.exec() # Start event loop
+        """
+        Builds the Qt widget (QApplication already exists at this point)
+        and shows it.  In qasync mode this is non-blocking; in threading
+        mode the caller handles the Qt event loop separately.
+        """
+        if HAS_QT:
+            self._build_widget()  # Safe now — QApplication is already alive
+            self._widget.show()
+            logging.info("JARVIS HUD displayed.")
+        else:
+            print("PyQt6 is not installed. Running in headless mode.")

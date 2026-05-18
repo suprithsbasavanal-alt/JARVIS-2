@@ -1,6 +1,7 @@
 # Core libraries for Jarvis 3.0 Ultimate
 PyQt6>=6.6.0              # Desktop HUD / UI framework
 pyttsx3>=2.90             # Local TTS fallback engine
+qasync>=0.27.1            # Bridge asyncio event loop into Qt's event loop
 pvporcupine==3.0.1  # Wake word detection
 SpeechRecognition==3.10.1  # Voice input
 elevenlabs==1.0.0  # High quality TTS
