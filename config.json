@@ -1,0 +1,14 @@
+{
+    "user_name": "Boss",
+    "ai_model": "llama3",
+    "voice_engine": "elevenlabs",
+    "voice_speed": 1.0,
+    "wake_word_sensitivity": 0.5,
+    "ui_theme": "dark",
+    "ui_color_primary": "#00f3ff",
+    "privacy_mode": false,
+    "default_automation_modes": {
+        "study": ["open_notes", "play_lofi"],
+        "coding": ["open_vscode", "open_terminal"]
+    }
+}
