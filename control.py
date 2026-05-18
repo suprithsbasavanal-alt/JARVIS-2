@@ -2,7 +2,11 @@ import os # OS commands
 import subprocess # Running shell commands
 import psutil # System information
 import logging # Logging errors
-import pyautogui # For window/mouse management
+try:
+    import pyautogui # For window/mouse management
+    HAS_GUI = True
+except ImportError:
+    HAS_GUI = False
 import shutil # For file operations
 from pathlib import Path # For better path handling
 
@@ -88,6 +92,9 @@ class MacController:
 
     def spotlight_search(self, query):
         """Uses PyAutoGUI to open Spotlight and search for a query."""
+        if not HAS_GUI:
+            print(f"Spotlight Search not available headless. (Query: {query})")
+            return
         print(f"Searching Spotlight for '{query}'...") # Log
         pyautogui.hotkey('command', 'space') # Open Spotlight
         pyautogui.sleep(0.5) # Wait for it to open

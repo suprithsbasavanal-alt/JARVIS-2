@@ -1,7 +1,11 @@
-import pyautogui # Screen capture
-import pytesseract # OCR for text extraction
-import cv2 # OpenCV for image processing
-import numpy as np # Array operations
+try:
+    import pyautogui # Screen capture
+    import cv2 # OpenCV for image processing
+    import numpy as np # Array operations
+    import pytesseract # OCR for text extraction
+    HAS_VISION_LIBS = True
+except ImportError:
+    HAS_VISION_LIBS = False
 import logging # Error logging
 try:
     from ultralytics import YOLO # YOLO for object detection
@@ -27,6 +31,8 @@ class VisionSystem:
         
     def capture_screen(self, save_path="current_screen.png"):
         """Takes a screenshot of the entire primary display."""
+        if not HAS_VISION_LIBS:
+            return None
         try:
             print("Taking real screenshot...") # Console output
             screenshot = pyautogui.screenshot() # Capture screen
