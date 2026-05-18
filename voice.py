@@ -1,7 +1,18 @@
 import speech_recognition as sr # Voice to text
-import pyttsx3 # Fallback TTS
-import pvporcupine # Wake word detection
-import pyaudio # Audio streaming
+try:
+    import pyttsx3 # Fallback TTS
+except ImportError:
+    pyttsx3 = None
+try:
+    import pvporcupine # Wake word detection
+except ImportError:
+    pvporcupine = None
+    print("[WARN] pvporcupine not installed — wake word disabled.")
+try:
+    import pyaudio # Audio streaming
+except ImportError:
+    pyaudio = None
+    print("[WARN] pyaudio not installed — microphone input disabled.")
 import struct # Binary data packing
 import logging # Error logging
 import os # OS functions
@@ -29,8 +40,11 @@ class VoiceSystem:
         # NOTE: Requires access key from picovoice console in a real app
         self.porcupine_key = os.environ.get("PORCUPINE_KEY", "YOUR_PICOVOICE_KEY") # Get API key
         try:
-            # We use "jarvis" keyword if available, else "hey siri" as placeholder for demo
-            self.porcupine = pvporcupine.create(access_key=self.porcupine_key, keywords=["jarvis"]) # Create wake word
+            if pvporcupine: # Only try if module is installed
+                # We use "jarvis" keyword if available, else "hey siri" as placeholder for demo
+                self.porcupine = pvporcupine.create(access_key=self.porcupine_key, keywords=["jarvis"]) # Create wake word
+            else:
+                self.porcupine = None # Module not installed
         except Exception as e:
             logging.error(f"Porcupine wake word failed (maybe missing API key): {e}") # Log error
             self.porcupine = None # Disable wake word if no key

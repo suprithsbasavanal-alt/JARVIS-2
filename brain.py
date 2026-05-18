@@ -1,4 +1,8 @@
-import ollama # Local AI inference
+try:
+    import ollama # Local AI inference
+except ImportError:
+    ollama = None
+    print("[WARN] ollama package not installed — AI brain will return offline message.")
 import logging # For logging
 import asyncio # For async requests
 import requests # For real internet access
@@ -45,6 +49,9 @@ class AIBrain:
             {"role": "user", "content": user_input} # User query
         ]
         
+        if not ollama: # Module not installed
+            return "I am currently offline — the ollama package is not installed. Please check Ollama."
+            
         try:
             # 3. Call Ollama API asynchronously
             # Run the synchronous ollama.chat in an executor to avoid blocking the event loop

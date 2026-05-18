@@ -1,29 +1,23 @@
 # Core libraries for Jarvis 3.0 Ultimate
+PyQt6>=6.6.0              # Desktop HUD / UI framework
+pyttsx3>=2.90             # Local TTS fallback engine
 pvporcupine==3.0.1  # Wake word detection
 SpeechRecognition==3.10.1  # Voice input
-pyttsx3==2.90  # Fallback TTS
 elevenlabs==1.0.0  # High quality TTS
 ollama==0.1.6  # Local AI brain
 chromadb==0.4.22  # Vector database for memory
 psutil==5.9.8  # Real system stats
-pyautogui==0.9.54  # Screen and mouse control
 pytesseract==0.3.10  # Optical character recognition
-opencv-python==4.9.0.80  # Vision and image processing
-PyQt6==6.6.1  # UI framework
 requests==2.31.0  # HTTP requests for internet access
 beautifulsoup4==4.12.3  # Web scraping
 selenium==4.17.2  # Browser automation
-ip-api==1.0.0 # Location access
 pyperclip==1.8.2  # Clipboard access
-osxphotos==0.62.2  # Apple Photos access
-PyMuPDF==1.23.21  # PDF reading
 python-docx==1.1.0  # Word document reading
 openpyxl==3.1.2  # Excel reading
 asyncio==3.4.3  # Async framework
 websockets==12.0  # WebSocket server for dashboard
 APScheduler==3.10.4  # Task scheduling
 redis==5.0.1  # Fast caching
-vispy==0.14.1  # High performance OpenGL visualizations
 pyaudio==0.2.14  # Audio streaming for PyAudio
 
 ultralytics==8.1.10  # YOLO object detection
